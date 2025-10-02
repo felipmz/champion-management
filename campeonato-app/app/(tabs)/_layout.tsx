@@ -1,33 +1,32 @@
-import { Tabs } from 'expo-router';
+// app/(tabs)/_layout.tsx
 import React from 'react';
+import { Tabs } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+// Você pode apagar o componente <TabBarIcon> se ele estiver aqui
+// e usar o ícone diretamente como mostrado abaixo.
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: '#007AFF', // Cor do ícone e texto ativos
+        headerShown: false, // Vamos deixar cada tela controlar seu próprio cabeçalho
       }}>
       <Tabs.Screen
+        // 1. A primeira aba continua sendo a de campeonatos
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Campeonatos',
+          tabBarIcon: ({ color }) => <Feather size={28} name="award" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        // 2. A segunda aba agora aponta para o nosso novo arquivo 'jogos.tsx'
+        name="jogos" // O nome do arquivo que criamos!
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Jogos',
+          tabBarIcon: ({ color }) => <Feather size={28} name="calendar" color={color} />,
         }}
       />
     </Tabs>
