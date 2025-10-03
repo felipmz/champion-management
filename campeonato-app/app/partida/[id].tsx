@@ -7,12 +7,9 @@ import { Feather } from '@expo/vector-icons';
 
 import { Fixture, GameEvent, Player, PlayerMatchStat } from '../../constants/types';
 import {
-  getMatchDetails_MOCK,
-  getPlayersForMatch_MOCK,
-  getEventsForMatch_MOCK,
-  addEvent_MOCK,
-  calculateMatchStats_MOCK,
-} from '../../services/mockDatabase';
+  getMatchDetails, getPlayersForMatch, getEventsForMatch, addEvent,
+  calculateMatchStats,
+} from '../../services/database';
 
 // Pequeno componente para o item do evento (sem alterações)
 const EventItem = ({ event }: { event: GameEvent }) => {
@@ -60,10 +57,10 @@ export default function MatchDetailScreen() {
   const fetchMatchData = async () => {
     setLoading(true);
     // TODO: Quando o Dev 2 terminar, substituir pelas funções reais
-    const matchData = await getMatchDetails_MOCK(matchId);
-    const eventsData = await getEventsForMatch_MOCK(matchId);
-    const playersData = await getPlayersForMatch_MOCK(matchId);
-    const statsData = await calculateMatchStats_MOCK(matchId); // Buscando stats
+    const matchData = await getMatchDetails(matchId);
+    const eventsData = await getEventsForMatch(matchId);
+    const playersData = await getPlayersForMatch(matchId);
+    const statsData = await calculateMatchStats(matchId); // Buscando stats
     
     setMatch(matchData || null);
     setEvents(eventsData.sort((a, b) => a.minute - b.minute));
@@ -95,12 +92,12 @@ export default function MatchDetailScreen() {
       const eventData: Omit<GameEvent, 'id' | 'player_name' | 'assister_name'> = {
         match_id: matchId,
         minute: parseInt(eventMinute),
-        type: 'goal', // Tipo específico
+        type: 'goal',
         player_id: selectedPlayer.id,
-        assister_id: selectedAssister?.id,
+        assister_id: selectedAssister?.id || 1,
         team_id: selectedPlayer.team_id,
       };
-      await addEvent_MOCK(eventData);
+      await addEvent(eventData);
     } 
     else if (modalInfo.type === 'card') { // Verificação explícita
       const eventData: Omit<GameEvent, 'id' | 'player_name' | 'assister_name'> = {
@@ -109,8 +106,9 @@ export default function MatchDetailScreen() {
         type: selectedCard, // Usa o estado 'selectedCard' que é 'yellow_card' ou 'red_card'
         player_id: selectedPlayer.id,
         team_id: selectedPlayer.team_id,
+        assister_id: null
       };
-      await addEvent_MOCK(eventData);
+      await addEvent(eventData);
     }
 
     closeModal();

@@ -7,7 +7,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Championship } from '../../constants/types';
-import { getChampionships_MOCK, createChampionship_MOCK } from '../../services/mockDatabase';
+import { getChampionships, createChampionship } from '../../services/database';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function HomeScreen() {
 
   const fetchChampionships = async () => {
     setLoading(true);
-    const data = await getChampionships_MOCK();
+    const data = await getChampionships();
     setChampionships(data);
     setLoading(false);
   };
@@ -58,7 +58,7 @@ export default function HomeScreen() {
     }
 
     // TODO: Substituir pela função real do Dev 2
-    await createChampionship_MOCK(newChampionshipName, finalPlayersPerTeam);
+    await createChampionship(newChampionshipName, finalPlayersPerTeam);
     setModalVisible(false);
     fetchChampionships();
   };

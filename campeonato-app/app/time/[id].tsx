@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Player, Team } from '../../constants/types';
-import { getTeamById_MOCK, getPlayersByTeamId_MOCK, createPlayer_MOCK } from '../../services/mockDatabase';
+import { getTeamById, getPlayersByTeamId, createPlayer } from '../../services/database';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -22,8 +22,8 @@ export default function TeamDetailScreen() {
     if (!teamId) return;
     setLoading(true);
     // TODO: Substituir pelas funções reais do Dev 2
-    const teamData = await getTeamById_MOCK(teamId);
-    const playersData = await getPlayersByTeamId_MOCK(teamId);
+    const teamData = await getTeamById(teamId);
+    const playersData = await getPlayersByTeamId(teamId);
     setTeam(teamData || null);
     setPlayers(playersData);
     setLoading(false);
@@ -36,7 +36,7 @@ export default function TeamDetailScreen() {
   const handleCreatePlayer = async () => {
     if (newPlayerName.trim().length === 0) return;
     // TODO: Substituir pela função real do Dev 2
-    await createPlayer_MOCK(teamId, newPlayerName);
+    await createPlayer(teamId, newPlayerName);
     setModalVisible(false);
     setNewPlayerName('');
     fetchTeamDetails(); // Recarrega os dados para mostrar o novo jogador

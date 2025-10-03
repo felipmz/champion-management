@@ -7,9 +7,9 @@ import { Feather } from '@expo/vector-icons';
 
 import { Championship, Team, Fixture, TeamStanding, PlayerStat } from '../../constants/types';
 import {
-  getChampionshipById_MOCK, getTeamsByChampionshipId_MOCK, createTeam_MOCK, generateFixtures_MOCK,
-  getStandings_MOCK, getPlayerStats_MOCK
-} from '../../services/mockDatabase';
+  getChampionshipById, getTeamsByChampionshipId, createTeam, generateFixtures,
+  getStandings, getPlayerStats
+} from '../../services/database';
 
 
 type ActiveTab = 'teams' | 'fixtures' | 'standings' | 'player_stats';
@@ -33,10 +33,10 @@ export default function ChampionshipDetailScreen() {
     const fetchDetails = async () => {
       if (!championshipId) return;
       setLoading(true);
-      const champData = await getChampionshipById_MOCK(championshipId);
-      const teamsData = await getTeamsByChampionshipId_MOCK(championshipId);
-      const standingsData = await getStandings_MOCK(championshipId);
-      const playerStatsData = await getPlayerStats_MOCK(championshipId);
+      const champData = await getChampionshipById(championshipId);
+      const teamsData = await getTeamsByChampionshipId(championshipId);
+      const standingsData = await getStandings(championshipId);
+      const playerStatsData = await getPlayerStats(championshipId);
 
       setChampionship(champData || null);
       setTeams(teamsData);
@@ -52,19 +52,19 @@ export default function ChampionshipDetailScreen() {
     if (newTeamName.trim().length === 0) return;
     
     // TODO: Substituir pela função real do Dev 2
-    await createTeam_MOCK(championshipId, newTeamName);
+    await createTeam(championshipId, newTeamName);
     
     setModalVisible(false);
     setNewTeamName('');
     
     // Re-busca os times para atualizar a lista na tela
-    const teamsData = await getTeamsByChampionshipId_MOCK(championshipId);
+    const teamsData = await getTeamsByChampionshipId(championshipId);
     setTeams(teamsData);
   };
   
   const handleGenerateFixtures = async () => {
      Alert.alert("Gerar Tabela", "Deseja gerar a tabela de jogos?", [{ text: "Cancelar" }, { text: "Gerar", onPress: async () => {
-        const newFixtures = await generateFixtures_MOCK(championshipId);
+        const newFixtures = await generateFixtures(championshipId);
         setFixtures(newFixtures);
         setActiveTab('fixtures');
      }}]);

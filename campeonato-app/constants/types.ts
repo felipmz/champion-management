@@ -52,7 +52,6 @@ export interface GameEvent {
   player_id: number;
   assister_id: number | null;
   team_id: number;
-  // Campos que vêm do JOIN (opcionais)
   player_name?: string;
   assister_name?: string;
 }
