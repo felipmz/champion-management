@@ -6,11 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Player, Team } from '../../constants/types';
-import { getTeamById, getPlayersByTeamId, createPlayer } from '../../services/database';
+import api from '../../services/api';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams();
-  const teamId = Number(id);
+  const teamId = String(id);
 
   const [team, setTeam] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -22,8 +22,8 @@ export default function TeamDetailScreen() {
     if (!teamId) return;
     setLoading(true);
     // TODO: Substituir pelas funções reais do Dev 2
-    const teamData = await getTeamById(teamId);
-    const playersData = await getPlayersByTeamId(teamId);
+    const teamData = (await api.get(`/teams/${teamId}`)).data; 
+    const playersData = (await api.get(`/teams/${teamId}/players`)).data;
     setTeam(teamData || null);
     setPlayers(playersData);
     setLoading(false);
@@ -35,8 +35,7 @@ export default function TeamDetailScreen() {
 
   const handleCreatePlayer = async () => {
     if (newPlayerName.trim().length === 0) return;
-    // TODO: Substituir pela função real do Dev 2
-    await createPlayer(teamId, newPlayerName);
+    await api.post(`/teams/${teamId}/players`, { name: newPlayerName });
     setModalVisible(false);
     setNewPlayerName('');
     fetchTeamDetails(); // Recarrega os dados para mostrar o novo jogador
@@ -56,7 +55,7 @@ export default function TeamDetailScreen() {
       <View style={styles.container}>
         <FlatList
           data={players}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item._id.toString()}
           renderItem={({ item }) => (
             <View style={styles.card}>
               <Feather name="user" size={24} color="#4A5568" />

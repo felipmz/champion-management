@@ -6,10 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Championship, Team, Fixture, TeamStanding, PlayerStat } from '../../constants/types';
-import {
-  getChampionshipById, getTeamsByChampionshipId, createTeam, generateFixtures,
-  getStandings, getPlayerStats
-} from '../../services/database';
+import api from '../../services/api';
 
 
 type ActiveTab = 'teams' | 'fixtures' | 'standings' | 'player_stats';
@@ -17,7 +14,7 @@ type ActiveTab = 'teams' | 'fixtures' | 'standings' | 'player_stats';
 export default function ChampionshipDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const championshipId = Number(id);
+  const championshipId = String(id);
 
   const [championship, setChampionship] = useState<Championship | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -33,16 +30,26 @@ export default function ChampionshipDetailScreen() {
     const fetchDetails = async () => {
       if (!championshipId) return;
       setLoading(true);
-      const champData = await getChampionshipById(championshipId);
-      const teamsData = await getTeamsByChampionshipId(championshipId);
-      const standingsData = await getStandings(championshipId);
-      const playerStatsData = await getPlayerStats(championshipId);
+      try {
+        // MUDANÇA 2: Buscando tudo da API em paralelo
+        const [champResponse, teamsResponse, standingsResponse, playerStatsResponse, fixturesResponse] = await Promise.all([
+            api.get(`/championships/${championshipId}`),
+            api.get(`/championships/${championshipId}/teams`),
+            api.get(`/championships/${championshipId}/standings`),
+            api.get(`/championships/${championshipId}/player-stats`),
+            api.get(`/championships/${championshipId}/fixtures`),
+        ]);
 
-      setChampionship(champData || null);
-      setTeams(teamsData);
-      setStandings(standingsData);
-      setPlayerStats(playerStatsData);
-      setLoading(false);
+        setChampionship(champResponse.data);
+        setTeams(teamsResponse.data);
+        setStandings(standingsResponse.data);
+        setPlayerStats(playerStatsResponse.data);
+        setFixtures(fixturesResponse.data);
+      } catch (error) {
+        console.error("Erro ao buscar detalhes do campeonato:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchDetails();
   }, [id]);
@@ -50,31 +57,33 @@ export default function ChampionshipDetailScreen() {
   // 👇👇 FUNÇÃO QUE ESTAVA FALTANDO 👇👇
   const handleCreateTeam = async () => {
     if (newTeamName.trim().length === 0) return;
-    
-    // TODO: Substituir pela função real do Dev 2
-    await createTeam(championshipId, newTeamName);
-    
-    setModalVisible(false);
-    setNewTeamName('');
-    
-    // Re-busca os times para atualizar a lista na tela
-    const teamsData = await getTeamsByChampionshipId(championshipId);
-    setTeams(teamsData);
+    try {
+        // MUDANÇA 3
+        await api.post(`/championships/${championshipId}/teams`, { name: newTeamName });
+        setModalVisible(false);
+        setNewTeamName('');
+        // Recarrega apenas os times
+        const teamsResponse = await api.get(`/championships/${championshipId}/teams`);
+        setTeams(teamsResponse.data);
+    } catch (error) { console.error(error); }
   };
   
   const handleGenerateFixtures = async () => {
      Alert.alert("Gerar Tabela", "Deseja gerar a tabela de jogos?", [{ text: "Cancelar" }, { text: "Gerar", onPress: async () => {
-        const newFixtures = await generateFixtures(championshipId);
-        setFixtures(newFixtures);
-        setActiveTab('fixtures');
+        try {
+            // MUDANÇA 4
+            const response = await api.post(`/championships/${championshipId}/generate-fixtures`);
+            setFixtures(response.data);
+            setActiveTab('fixtures');
+        } catch (error) { console.error(error); }
      }}]);
   };
 
-  const navigateToMatch = (fixtureId: number) => {
+  const navigateToMatch = (fixtureId: string) => {
     router.push(`/partida/${fixtureId}`);
   };
 
-  const navigateToTeam = (teamId: number) => {
+  const navigateToTeam = (teamId: string) => {
     router.push(`/time/${teamId}`);
   };
 
@@ -110,7 +119,7 @@ export default function ChampionshipDetailScreen() {
             <View style={styles.contentView}>
                 <Text style={styles.sectionTitle}>Times Inscritos ({teams.length})</Text>
                 {teams.map(team => (
-                <TouchableOpacity key={team.id} style={styles.card} onPress={() => navigateToTeam(team.id)}>
+                <TouchableOpacity key={team._id} style={styles.card} onPress={() => navigateToTeam(team._id)}>
                     <Text style={styles.cardText}>{team.name}</Text>
                     <Feather name="chevron-right" size={20} color="#CBD5E0" />
                 </TouchableOpacity>
@@ -125,7 +134,7 @@ export default function ChampionshipDetailScreen() {
                 </TouchableOpacity>
                 <Text style={styles.sectionTitle}>Partidas</Text>
                 {fixtures.map(fixture => (
-                <TouchableOpacity key={fixture.id} style={styles.card} onPress={() => navigateToMatch(fixture.id)}>
+                <TouchableOpacity key={fixture._id} style={styles.card} onPress={() => navigateToMatch(fixture._id)}>
                     <View style={styles.fixtureRow}>
                     <Text style={styles.teamName}>{fixture.home_team_name}</Text>
                     <Text style={styles.vsText}>vs</Text>

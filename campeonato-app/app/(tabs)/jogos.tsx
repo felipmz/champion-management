@@ -6,7 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 
 import { Fixture } from '../../constants/types';
-import { getAllFixtures_MOCK } from '../../services/mockDatabase';
+import api from '../../services/api'; // MUDANÇA 1: Usando o serviço de API
 
 export default function TabJogosScreen() {
   const router = useRouter();
@@ -15,11 +15,17 @@ export default function TabJogosScreen() {
 
   const fetchAllFixtures = async () => {
     setLoading(true);
-    // TODO: Quando o Dev 2 terminar, substituir pela função real
-    const data = await getAllFixtures_MOCK();
-    // Ordena por rodada para uma melhor visualização
-    setFixtures(data.sort((a, b) => a.round - b.round));
-    setLoading(false);
+    try {
+      // MUDANÇA 2: Chamando o endpoint da API
+      const response = await api.get('/fixtures');
+      // Ordena por rodada para uma melhor visualização
+      setFixtures(response.data.sort((a: Fixture, b: Fixture) => a.round - b.round));
+    } catch (error) {
+      console.error("Erro ao buscar partidas:", error);
+      alert('Não foi possível carregar as partidas.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // useFocusEffect garante que a lista seja atualizada sempre que o usuário voltar para esta aba
@@ -29,7 +35,8 @@ export default function TabJogosScreen() {
     }, [])
   );
 
-  const navigateToMatch = (fixtureId: number) => {
+  // MUDANÇA 3: O ID da partida agora é uma string
+  const navigateToMatch = (fixtureId: string) => {
     router.push(`/partida/${fixtureId}`);
   };
 
@@ -44,9 +51,10 @@ export default function TabJogosScreen() {
 
         <FlatList
           data={fixtures}
-          keyExtractor={(item) => item.id.toString()}
+          // MUDANÇA 4: Usando _id do MongoDB como chave
+          keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => navigateToMatch(item.id)}>
+            <Pressable style={styles.card} onPress={() => navigateToMatch(item._id)}>
               <View style={styles.cardHeader}>
                 <Text style={styles.championshipName}>{item.championshipName}</Text>
                 <Text style={styles.roundText}>Rodada {item.round}</Text>

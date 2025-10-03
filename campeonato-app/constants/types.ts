@@ -1,60 +1,48 @@
 // constants/types.ts
-
 export type Championship = {
-  id: number;
+  _id: string;
   name: string;
   players_per_team: number;
 };
 
 export type Team = {
-  id: number;
-  championship_id: number;
+  _id: string;
+  championship_id: string;
   name: string;
 };
 
 export type Player = {
-  id: number;
-  team_id: number;
+  _id: string;
+  team_id: string;
   name: string;
 };
 
-export type PlayerStat = {
-  position: number;
-  playerName: string;
-  teamName: string;
-  goals: number;
-};
-
-// 👇 CORREÇÃO AQUI: Adicionamos as propriedades que estavam faltando
-// constants/types.ts
-
-// ... outros tipos aqui ...
-
 export interface Fixture {
-  id: number;
-  championship_id: number;
+  _id: string;
   round: number;
-  home_team_id: number;
-  away_team_id: number;
-  home_team_score: number | null;
-  away_team_score: number | null;
-  status: 'pending' | 'live' | 'finished';
-  // Campos que vêm do JOIN (são opcionais pois nem sempre buscamos)
-  home_team_name?: string;
-  away_team_name?: string;
+  championship_id: string;
+  championshipName?: string;
+  home_team_id: any; // Usamos 'any' aqui para simplificar, pois a API popula o objeto
+  away_team_id: any;
+  home_team_name: string;
+  away_team_name: string;
+  home_team_score?: number;
+  away_team_score?: number;
+  status?: 'pending' | 'live' | 'finished';
 }
 
-export interface GameEvent {
-  id: number;
-  match_id: number;
+export type GameEvent = {
+  _id: string;
+  match_id: string;
   minute: number;
   type: 'goal' | 'yellow_card' | 'red_card';
-  player_id: number;
-  assister_id: number | null;
-  team_id: number;
-  player_name?: string;
+  player_id: string;
+  player_name: string; // O backend envia snake_case, mas vamos manter camelCase aqui e tratar na chamada
+  assister_id?: string;
   assister_name?: string;
-}
+  team_id: string;
+};
+
 export type TeamStanding = {
   position: number;
   teamName: string;
@@ -76,4 +64,11 @@ export type PlayerMatchStat = {
   yellowCards: number;
   redCards: number;
   points: number;
+};
+
+export type PlayerStat = {
+  position: number;
+  playerName: string;
+  teamName: string;
+  goals: number;
 };

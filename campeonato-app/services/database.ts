@@ -1,7 +1,7 @@
-import * as SQLite from 'expo-sqlite';
+import { openDatabaseSync } from 'expo-sqlite';
 import { Championship, Team, Fixture, Player, GameEvent, TeamStanding, PlayerStat, PlayerMatchStat } from '../constants/types';
 
-const db = SQLite.openDatabaseSync('championship.db');
+const db = openDatabaseSync('championship.db');
 
 export const initDatabase = async (): Promise<void> => {
   await db.execAsync(`
@@ -54,7 +54,7 @@ export const initDatabase = async (): Promise<void> => {
       FOREIGN KEY (assister_id) REFERENCES players (id) ON DELETE CASCADE
     );
   `);
-  console.log("Banco de dados SQLite inicializado.");
+  console.log("Banco de dados SQLite (moderno) inicializado.");
 };
 
 // --- Funções de Campeonato ---
@@ -87,8 +87,9 @@ export const createPlayer = async (teamId: number, name: string): Promise<void> 
   await db.runAsync('INSERT INTO players (team_id, name) VALUES (?, ?);', [teamId, name]);
 };
 
+// --- Funções de Partida (Ciclo de Vida) ---
 export const getPlayersForMatch = async (matchId: number): Promise<Player[]> => {
-  const match = await db.getFirstAsync<Fixture>('SELECT * FROM fixtures WHERE id = ?;', [matchId]);
+  const match = await db.getFirstAsync<Fixture>('SELECT home_team_id, away_team_id FROM fixtures WHERE id = ?;', [matchId]);
   if (!match) return [];
   return await db.getAllAsync<Player>('SELECT * FROM players WHERE team_id = ? OR team_id = ?;', [match.home_team_id, match.away_team_id]);
 };
@@ -183,6 +184,20 @@ export const generateFixtures = async (championshipId: number): Promise<Fixture[
   return await db.getAllAsync<Fixture>(query, [championshipId]);
 };
 
+// --- Funções de Criação Manual ---
+type ManualFixtureData = {
+    championship_id: number;
+    round: number;
+    home_team_id: number;
+    away_team_id: number;
+}
+export const createManualFixture = async (data: ManualFixtureData): Promise<void> => {
+  await db.runAsync(
+    'INSERT INTO fixtures (championship_id, round, home_team_id, away_team_id, status) VALUES (?, ?, ?, ?, ?);',
+    [data.championship_id, data.round, data.home_team_id, data.away_team_id, 'pending']
+  );
+};
+
 // --- Cálculos de Estatísticas ---
 export const calculateMatchStats = async (matchId: number): Promise<PlayerMatchStat[]> => {
   const players = await getPlayersForMatch(matchId);
@@ -207,17 +222,15 @@ export const getPlayerStats = async (championshipId: number): Promise<PlayerStat
       p.id as playerId, 
       p.name as playerName, 
       t.name as teamName, 
-      COUNT(CASE WHEN e.type = 'goal' THEN 1 END) as goals,
-      COUNT(CASE WHEN e.type = 'yellow_card' THEN 1 END) as yellowCards,
-      COUNT(CASE WHEN e.type = 'red_card' THEN 1 END) as redCards
-    FROM players p
+      COUNT(e.id) as goals
+    FROM events e
+    JOIN players p ON e.player_id = p.id
     JOIN teams t ON p.team_id = t.id
-    LEFT JOIN events e ON p.id = e.player_id
-    WHERE t.championship_id = ?
+    WHERE e.type = 'goal' AND t.championship_id = ?
     GROUP BY p.id
     ORDER BY goals DESC;
   `;
-  const results = await db.getAllAsync<Omit<PlayerStat, 'position'>>(query, [championshipId]);
+  const results = await db.getAllAsync<Omit<PlayerStat, 'position' | 'goals' > & {goals: number}>(query, [championshipId]);
   
   return results.map((result, index) => ({
     ...result,
@@ -232,7 +245,7 @@ export const getStandings = async (championshipId: number): Promise<TeamStanding
     [championshipId]
   );
 
-  const standingsMap: { [key: number]: Omit<TeamStanding, 'position'> } = {};
+  const standingsMap: { [key: number]: Omit<TeamStanding, 'position'> & {teamName: string} } = {};
 
   teams.forEach(team => {
     standingsMap[team.id] = {
@@ -274,17 +287,4 @@ export const getStandings = async (championshipId: number): Promise<TeamStanding
   });
 
   return standingsArray.map((team, index) => ({ ...team, position: index + 1 }));
-};
-
-type ManualFixtureData = {
-    championship_id: number;
-    round: number;
-    home_team_id: number;
-    away_team_id: number;
-}
-export const createManualFixture = async (data: ManualFixtureData): Promise<void> => {
-  await db.runAsync(
-    'INSERT INTO fixtures (championship_id, round, home_team_id, away_team_id, status) VALUES (?, ?, ?, ?, ?);',
-    [data.championship_id, data.round, data.home_team_id, data.away_team_id, 'pending']
-  );
 };

@@ -7,7 +7,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Championship } from '../../constants/types';
-import { getChampionships, createChampionship } from '../../services/database';
+import api from '../../services/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,8 +24,8 @@ export default function HomeScreen() {
 
   const fetchChampionships = async () => {
     setLoading(true);
-    const data = await getChampionships();
-    setChampionships(data);
+    const response = await api.get('/championships');
+    setChampionships(response.data);
     setLoading(false);
   };
 
@@ -58,12 +58,21 @@ export default function HomeScreen() {
     }
 
     // TODO: Substituir pela função real do Dev 2
-    await createChampionship(newChampionshipName, finalPlayersPerTeam);
-    setModalVisible(false);
-    fetchChampionships();
+     try {
+        // MUDANÇA 3
+        await api.post('/championships', { 
+            name: newChampionshipName, 
+            players_per_team: finalPlayersPerTeam 
+        });
+        setModalVisible(false);
+        fetchChampionships(); // Recarrega a lista
+    } catch (error) {
+        console.error("Erro ao criar campeonato:", error);
+        alert('Não foi possível criar o campeonato.');
+    }
   };
 
-  const handleNavigateToChampionship = (id: number) => {
+  const handleNavigateToChampionship = (id: string) => {
     router.push(`/campeonato/${id}`);
   };
 
@@ -88,9 +97,9 @@ export default function HomeScreen() {
 
         <FlatList
           data={championships}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item._id}
           renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => handleNavigateToChampionship(item.id)}>
+            <Pressable style={styles.card} onPress={() => handleNavigateToChampionship(item._id)}>
               <View>
                 <Text style={styles.cardText}>{item.name}</Text>
                 <Text style={styles.cardSubText}>{item.players_per_team} jogadores por time</Text>
