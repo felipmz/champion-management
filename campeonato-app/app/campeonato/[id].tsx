@@ -246,3 +246,4 @@ const styles = StyleSheet.create({
   rankText: { fontSize: 18, fontWeight: 'bold', color: '#A0AEC0', marginRight: 16, width: 25 },
   goalsText: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
 });
+

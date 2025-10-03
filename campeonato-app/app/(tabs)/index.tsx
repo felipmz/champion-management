@@ -197,3 +197,5 @@ const styles = StyleSheet.create({
   createButton: { backgroundColor: '#007AFF' },
   modalButtonText: { fontWeight: 'bold', color: '#1A2B48', fontSize: 16 },
 });
+
+
