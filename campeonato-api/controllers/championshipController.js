@@ -90,6 +90,11 @@ exports.getPlayersByTeam = async (req, res) => {
 };
 
 // Gera a tabela de jogos (lógica complexa)
+// controllers/championshipController.js
+
+// ... (outras funções antes desta) ...
+
+// Gera a tabela de jogos (lógica complexa)
 exports.generateFixtures = async (req, res) => {
     try {
         const championshipId = req.params.id;
@@ -114,7 +119,7 @@ exports.generateFixtures = async (req, res) => {
                 const home = teamList[i];
                 const away = teamList[teamList.length - 1 - i];
 
-                if (home._id && away._id) { // Não cria jogo com o time BYE
+                if (home._id && away._id) {
                     fixtures.push({
                         championship_id: championshipId,
                         round: round + 1,
@@ -128,11 +133,22 @@ exports.generateFixtures = async (req, res) => {
         }
 
         await Fixture.insertMany(fixtures);
+        
+        // 👇 CORREÇÃO APLICADA AQUI 👇
+        // Trocamos 'FixtureModel' por 'Fixture'
         const createdFixtures = await Fixture.find({ championship_id: championshipId })
             .populate('home_team_id', 'name')
             .populate('away_team_id', 'name');
 
-        res.status(201).json(createdFixtures);
+        // Adicionamos a formatação que o frontend espera
+        const formattedFixtures = createdFixtures.map(f => ({
+            ...f.toObject(),
+            home_team_name: f.home_team_id.name,
+            away_team_name: f.away_team_id.name,
+        }));
+        
+        res.status(201).json(formattedFixtures);
+
     } catch (error) {
         console.error('ERRO NO CONTROLLER:', error);
         res.status(500).json({ error: error.message });
@@ -258,6 +274,111 @@ exports.getTeamById = async (req, res) => {
         res.status(200).json(team);
     } catch (error) {
         console.error('ERRO NO CONTROLLER:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.deleteChampionship = async (req, res) => {
+    try {
+        const champ = await Championship.findOneAndDelete({ _id: req.params.id });
+        if (!champ) {
+            return res.status(404).json({ message: "Campeonato não encontrado" });
+        }
+        res.status(200).json({ message: "Campeonato e todos os dados associados foram excluídos." });
+    } catch (error) {
+        console.error('ERRO AO DELETAR CAMPEONATO:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+
+// DELETAR um time 
+exports.deleteTeam = async (req, res) => {
+    // Inicia uma sessão para a transação
+    const session = await mongoose.startSession();
+    // Inicia a transação
+    session.startTransaction();
+    try {
+        const { id } = req.params; // Pega o ID do time a ser deletado
+
+        // 1. Validação: Verifica se o time realmente existe
+        const team = await Team.findById(id).session(session);
+        if (!team) {
+            await session.abortTransaction(); // Cancela a transação
+            session.endSession();
+            return res.status(404).json({ message: 'Time não encontrado.' });
+        }
+
+        // 2. Encontrar Partidas: Acha todas as partidas em que o time participou (em casa ou fora)
+        const fixtures = await Fixture.find({ 
+            $or: [{ home_team_id: id }, { away_team_id: id }] 
+        }).session(session);
+        
+
+        // --- VERIFICAÇÃO ADICIONADA ---
+        // 2.1. Verifica se alguma das partidas encontradas está com o status 'live'
+        const hasLiveFixture = fixtures.some(fixture => fixture.status === 'live');
+        if (hasLiveFixture) {
+            // Se houver uma partida ao vivo, aborta a transação e informa o usuário
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Não é possível deletar um time que tem uma partida em andamento.' });
+        }
+        // --- FIM DA VERIFICAÇÃO ---
+
+
+        const fixtureIds = fixtures.map(f => f._id);
+
+        // 3. Deletar Eventos: Se houver partidas, deleta todos os eventos (gols, cartões) associados a elas
+        if (fixtureIds.length > 0) {
+            await Event.deleteMany({ match_id: { $in: fixtureIds } }).session(session);
+        }
+
+        // 4. Deletar Partidas: Deleta as partidas encontradas
+        if (fixtureIds.length > 0) {
+            await Fixture.deleteMany({ _id: { $in: fixtureIds } }).session(session);
+        }
+        
+        // 5. Deletar Jogadores: Deleta todos os jogadores que pertencem ao time
+        await Player.deleteMany({ team_id: id }).session(session);
+
+        // 6. Deletar o Time: Finalmente, deleta o próprio time
+        await Team.findByIdAndDelete(id).session(session);
+
+        // Se todos os passos acima ocorreram sem erro, confirma a transação
+        await session.commitTransaction();
+        res.status(200).json({ message: 'Time e todos os dados associados foram deletados com sucesso.' });
+
+    } catch (error) {
+        // Se qualquer passo falhar, a transação inteira é revertida
+        await session.abortTransaction();
+        console.error('ERRO AO DELETAR TIME:', error);
+        res.status(500).json({ error: error.message });
+    } finally {
+        // Encerra a sessão, independentemente do resultado
+        session.endSession();
+    }
+};
+
+// controllers/championshipController.js
+// ... (outras funções)
+
+// 👇 ADICIONE ESTA NOVA FUNÇÃO
+exports.deletePlayer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const player = await Player.findByIdAndDelete(id);
+
+        if (!player) {
+            return res.status(404).json({ message: "Jogador não encontrado." });
+        }
+
+        // Opcional: Remover eventos associados a este jogador
+        await Event.deleteMany({ $or: [{ player_id: id }, { assister_id: id }] });
+
+        res.status(200).json({ message: "Jogador excluído com sucesso." });
+    } catch (error) {
+        console.error('ERRO AO DELETAR JOGADOR:', error);
         res.status(500).json({ error: error.message });
     }
 };

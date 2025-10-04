@@ -20,6 +20,10 @@ mongoose.connect(process.env.MONGODB_URI)
 // Rotas da API
 app.use('/api', apiRoutes);
 
+/*
 app.listen(PORT, () => {
   console.log(`API rodando na porta ${PORT}`);
 });
+*/
+
+module.exports = app;

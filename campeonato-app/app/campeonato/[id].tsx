@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Championship, Team, Fixture, TeamStanding, PlayerStat } from '../../constants/types';
+import { useChampionshipStore } from '../../stores/championshipStore';
 import api from '../../services/api';
 
 
@@ -15,56 +16,35 @@ export default function ChampionshipDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const championshipId = String(id);
+  const { 
+    selectedChampionship, 
+    teams, 
+    standings, 
+    playerStats,
+    fixtures, 
+    isLoading, 
+    fetchChampionshipDetails,
+    createTeam,
+    generateFixtures
+  } = useChampionshipStore();
 
-  const [championship, setChampionship] = useState<Championship | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [fixtures, setFixtures] = useState<Fixture[]>([]);
-  const [standings, setStandings] = useState<TeamStanding[]>([]);
-  const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
-  const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTab>('teams');
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      if (!championshipId) return;
-      setLoading(true);
-      try {
-        // MUDANÇA 2: Buscando tudo da API em paralelo
-        const [champResponse, teamsResponse, standingsResponse, playerStatsResponse, fixturesResponse] = await Promise.all([
-            api.get(`/championships/${championshipId}`),
-            api.get(`/championships/${championshipId}/teams`),
-            api.get(`/championships/${championshipId}/standings`),
-            api.get(`/championships/${championshipId}/player-stats`),
-            api.get(`/championships/${championshipId}/fixtures`),
-        ]);
-
-        setChampionship(champResponse.data);
-        setTeams(teamsResponse.data);
-        setStandings(standingsResponse.data);
-        setPlayerStats(playerStatsResponse.data);
-        setFixtures(fixturesResponse.data);
-      } catch (error) {
-        console.error("Erro ao buscar detalhes do campeonato:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetails();
-  }, [id]);
+    if (championshipId) {
+      fetchChampionshipDetails(championshipId);
+    }
+  }, [id, fetchChampionshipDetails]);
 
   // 👇👇 FUNÇÃO QUE ESTAVA FALTANDO 👇👇
   const handleCreateTeam = async () => {
     if (newTeamName.trim().length === 0) return;
     try {
-        // MUDANÇA 3
-        await api.post(`/championships/${championshipId}/teams`, { name: newTeamName });
+        await createTeam(championshipId, newTeamName);
         setModalVisible(false);
         setNewTeamName('');
-        // Recarrega apenas os times
-        const teamsResponse = await api.get(`/championships/${championshipId}/teams`);
-        setTeams(teamsResponse.data);
     } catch (error) { console.error(error); }
   };
   
@@ -72,8 +52,7 @@ export default function ChampionshipDetailScreen() {
      Alert.alert("Gerar Tabela", "Deseja gerar a tabela de jogos?", [{ text: "Cancelar" }, { text: "Gerar", onPress: async () => {
         try {
             // MUDANÇA 4
-            const response = await api.post(`/championships/${championshipId}/generate-fixtures`);
-            setFixtures(response.data);
+            await generateFixtures(championshipId);
             setActiveTab('fixtures');
         } catch (error) { console.error(error); }
      }}]);
@@ -87,15 +66,16 @@ export default function ChampionshipDetailScreen() {
     router.push(`/time/${teamId}`);
   };
 
-  if (loading) return <ActivityIndicator size="large" style={styles.centered} />;
-  if (!championship) return <Text style={styles.centered}>Campeonato não encontrado.</Text>;
+  if (isLoading || !selectedChampionship) {
+    return <ActivityIndicator size="large" style={styles.centered} />;
+  }
 
   // O JSX do return permanece o mesmo, pois ele já chamava a função 'handleCreateTeam'
   return (
     <SafeAreaView style={styles.safeArea}>
         {/* ... todo o seu código JSX a partir daqui ... */}
         {/* Ele não precisa ser alterado, apenas a função acima precisava ser adicionada. */}
-        <Stack.Screen options={{ title: championship.name }} />
+        <Stack.Screen options={{ title: selectedChampionship.name }} />
         <ScrollView style={styles.container}>
             <View style={styles.tabContainer}>
                 <TouchableOpacity style={[styles.tab, activeTab === 'teams' && styles.activeTab]} onPress={() => setActiveTab('teams')}>

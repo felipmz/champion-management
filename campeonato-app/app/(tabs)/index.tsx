@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, SafeAreaView, StyleSheet, Pressable,
-  Modal, TextInput, ActivityIndicator, TouchableOpacity
+  Modal, TextInput, ActivityIndicator, TouchableOpacity,
+  Alert
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -84,6 +85,31 @@ export default function HomeScreen() {
     </View>
   );
 
+  const handleDeleteChampionship = (championshipId: string, championshipName: string) => {
+    Alert.alert(
+      "Excluir Campeonato",
+      `Tem certeza que deseja excluir o campeonato "${championshipName}"? Todos os times, jogadores e partidas associados serão perdidos permanentemente.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/championships/${championshipId}`);
+              // Atualiza a lista na tela removendo o item deletado
+              setChampionships(prevChamps => prevChamps.filter(c => c._id !== championshipId));
+              Alert.alert("Sucesso", "Campeonato excluído.");
+            } catch (error) {
+              console.error("Erro ao excluir campeonato:", error);
+              Alert.alert("Erro", "Não foi possível excluir o campeonato.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return <View style={styles.centered}><ActivityIndicator size="large" color="#007AFF" /></View>;
   }
@@ -105,6 +131,12 @@ export default function HomeScreen() {
                 <Text style={styles.cardSubText}>{item.players_per_team} jogadores por time</Text>
               </View>
               <Feather name="chevron-right" size={24} color="#CBD5E0" />
+              <View style={styles.cardActions}>
+                <TouchableOpacity onPress={() => handleDeleteChampionship(item._id, item.name)} style={styles.deleteButton}>
+                  <Feather name="trash-2" size={24} color="#EF4444" />
+                </TouchableOpacity>
+                <Feather name="chevron-right" size={24} color="#CBD5E0" />
+              </View>
             </Pressable>
           )}
           ListEmptyComponent={EmptyListComponent}
@@ -185,6 +217,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: 'white', padding: 20, borderRadius: 12, marginBottom: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2, shadowColor: '#1A2B48', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }},
   cardText: { fontSize: 18, fontWeight: '600', color: '#1A2B48' },
   cardSubText: { fontSize: 14, color: '#A0AEC0', marginTop: 4 },
+  cardActions: { flexDirection: 'row', alignItems: 'center' },
+  deleteButton: { padding: 8, marginRight: 8 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F4F7FC' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   emptyTitle: { fontSize: 22, fontWeight: 'bold', color: '#4A5568', marginTop: 16 },
@@ -206,5 +240,3 @@ const styles = StyleSheet.create({
   createButton: { backgroundColor: '#007AFF' },
   modalButtonText: { fontWeight: 'bold', color: '#1A2B48', fontSize: 16 },
 });
-
-

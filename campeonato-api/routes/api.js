@@ -8,15 +8,18 @@ const matchController = require('../controllers/matchController');
 router.post('/championships', champController.createChampionship);
 router.get('/championships', champController.getAllChampionships);
 router.get('/championships/:id', champController.getChampionshipById);
+router.delete('/championships/:id', champController.deleteChampionship);
 
 // --- Rotas de Time (aninhadas em campeonato) ---
 router.post('/championships/:id/teams', champController.createTeam);
 router.get('/championships/:id/teams', champController.getTeamsByChampionship);
+router.delete('/teams/:id', champController.deleteTeam);
 
 // --- Rotas de Jogador (aninhadas em time) ---
 router.post('/teams/:id/players', champController.createPlayer);
 router.get('/teams/:id/players', champController.getPlayersByTeam);
 router.get('/teams/:id', champController.getTeamById);
+router.delete('/players/:id', champController.deletePlayer);
 
 // --- Rotas de Partida (Fixture) e Eventos ---
 router.post('/championships/:id/generate-fixtures', champController.generateFixtures);
