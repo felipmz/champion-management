@@ -1,34 +1,29 @@
 // app/partida/[id].tsx
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
-import { Fixture, GameEvent, Player, PlayerMatchStat } from '../../constants/types';
-import api from '../../services/api';
+import { GameEvent, Player } from '../../constants/types';
+import { useAppStore } from '../../stores/championshipStore';
 
-// Componente EventItem corrigido
+// Componente EventItem
 const EventItem = ({ event }: { event: GameEvent }) => {
     const iconMap = {
       goal: { name: 'award', color: '#28A745' },
       yellow_card: { name: 'square', color: '#FFC107' },
       red_card: { name: 'square', color: '#DC3545' },
     };
-    const { name, color } = iconMap[event.type];
+    const icon = iconMap[event.type] || { name: 'help-circle', color: 'gray' };
   
     return (
       <View style={styles.eventCard}>
-        <View style={styles.eventMinuteContainer}>
-          <Text style={styles.eventMinute}>{event.minute}'</Text>
-        </View>
-        <Feather name={name as any} size={20} color={'white'} style={{backgroundColor: color, padding: 4, borderRadius: 4, overflow: 'hidden'}}/>
+        <View style={styles.eventMinuteContainer}><Text style={styles.eventMinute}>{event.minute}'</Text></View>
+        <Feather name={icon.name as any} size={20} color={'white'} style={{backgroundColor: icon.color, padding: 4, borderRadius: 4, overflow: 'hidden'}}/>
         <View style={styles.eventDetails}>
-          {/* CORREÇÃO AQUI */}
           <Text style={styles.eventPlayer}>{event.player_name}</Text>
-          {event.type === 'goal' && event.assister_name && (
-            <Text style={styles.eventAssist}>Assistência: {event.assister_name}</Text>
-          )}
+          {event.type === 'goal' && event.assister_name && (<Text style={styles.eventAssist}>Assistência: {event.assister_name}</Text>)}
         </View>
       </View>
     );
@@ -41,11 +36,17 @@ export default function MatchDetailScreen() {
   const router = useRouter();
   const matchId = String(id);
 
-  const [match, setMatch] = useState<Fixture | null>(null);
-  const [events, setEvents] = useState<GameEvent[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [stats, setStats] = useState<PlayerMatchStat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    selectedMatch: match,
+    matchEvents: events,
+    matchPlayers: players,
+    matchStats: stats,
+    isLoading,
+    fetchMatchDetails,
+    addEvent,
+    finishMatch,
+  } = useAppStore();
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('events');
   const [modalInfo, setModalInfo] = useState<{ visible: boolean; type: 'goal' | 'card' | null }>({ visible: false, type: null });
   const [eventMinute, setEventMinute] = useState('');
@@ -53,33 +54,17 @@ export default function MatchDetailScreen() {
   const [selectedAssister, setSelectedAssister] = useState<Player | null>(null);
   const [selectedCard, setSelectedCard] = useState<'yellow_card' | 'red_card'>('yellow_card');
 
-  const fetchMatchData = async () => {
-    try {
-      setLoading(true);
-      const [matchResponse, eventsResponse, playersResponse, statsResponse] = await Promise.all([
-        api.get(`/matches/${matchId}`),
-        api.get(`/matches/${matchId}/events`),
-        api.get(`/matches/${matchId}/players`),
-        api.get(`/matches/${matchId}/stats`),
-      ]);
-      
-      setMatch(matchResponse.data || null);
-      setEvents(eventsResponse.data.sort((a: GameEvent, b: GameEvent) => a.minute - b.minute));
-      setPlayers(playersResponse.data);
-      setStats(statsResponse.data);
-    } catch (error) {
-      console.error("Erro ao buscar dados da partida:", error);
-      Alert.alert("Erro", "Não foi possível carregar os dados da partida.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { if (matchId) fetchMatchData(); }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (matchId && matchId !== "undefined") {
+        fetchMatchDetails(matchId);
+      }
+    }, [matchId])
+  );
 
   const handleSaveEvent = async () => {
     if (!eventMinute || !selectedPlayer) { alert('Preencha o minuto e o jogador.'); return; }
-
+    
     let eventPayload: any;
     if (modalInfo.type === 'goal') {
         eventPayload = { type: 'goal', player_id: selectedPlayer._id, assister_id: selectedAssister?._id, team_id: selectedPlayer.team_id, minute: parseInt(eventMinute) };
@@ -88,9 +73,8 @@ export default function MatchDetailScreen() {
     }
     
     try {
-        await api.post(`/matches/${matchId}/events`, eventPayload);
+        await addEvent(matchId, eventPayload);
         closeModal();
-        fetchMatchData();
     } catch (error) {
         console.error("Erro ao salvar evento:", error);
         Alert.alert("Erro", "Não foi possível salvar o evento.");
@@ -98,9 +82,10 @@ export default function MatchDetailScreen() {
   };
 
   const handleFinishMatch = () => {
-    Alert.alert("Finalizar Partida", "Deseja marcar esta partida como finalizada?", [ { text: "Cancelar" }, { text: "Finalizar", style: "destructive", onPress: async () => {
+    if (!match) return;
+    Alert.alert( "Finalizar Partida", "Deseja marcar esta partida como finalizada?", [ { text: "Cancelar" }, { text: "Finalizar", style: "destructive", onPress: async () => {
         try {
-            await api.patch(`/matches/${matchId}/status`, { status: 'finished' });
+            await finishMatch(matchId, match.championship_id);
             Alert.alert("Sucesso", "Partida finalizada!", [{ text: "OK", onPress: () => router.back() }]);
         } catch (error) {
             Alert.alert("Erro", "Não foi possível finalizar a partida.");
@@ -111,8 +96,7 @@ export default function MatchDetailScreen() {
   const openModal = (type: 'goal' | 'card') => setModalInfo({ visible: true, type });
   const closeModal = () => { setModalInfo({ visible: false, type: null }); setEventMinute(''); setSelectedPlayer(null); setSelectedAssister(null); };
   
-  if (loading) return <ActivityIndicator size="large" style={styles.centered} />;
-  if (!match) return <Text style={styles.centered}>Partida não encontrada.</Text>;
+  if (isLoading || !match) return <ActivityIndicator size="large" style={styles.centered} />;
   
   const homeTeamPlayers = players.filter(p => String(p.team_id) === String(match.home_team_id._id));
   const awayTeamPlayers = players.filter(p => String(p.team_id) === String(match.away_team_id._id));
@@ -154,11 +138,11 @@ export default function MatchDetailScreen() {
             <>
             <View style={styles.actionsContainer}>
               <TouchableOpacity style={[styles.actionButton, match.status === 'finished' && styles.disabledButton]} onPress={() => openModal('goal')} disabled={match.status === 'finished'}>
-                <Feather name="award" size={19} color="#FFF" />
+                <Feather name="award" size={24} color="#FFF" />
                 <Text style={styles.actionButtonText}>Adicionar Gol</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionButton, match.status === 'finished' && styles.disabledButton]} onPress={() => openModal('card')} disabled={match.status === 'finished'}>
-                <Feather name="square" size={19} color="#FFF" />
+                <Feather name="square" size={24} color="#FFF" />
                 <Text style={styles.actionButtonText}>Adicionar Cartão</Text>
               </TouchableOpacity>
             </View>

@@ -7,7 +7,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { Player, Team } from '../../constants/types';
 import api from '../../services/api';
-import { useChampionshipStore } from '../../stores/championshipStore'; // Importando a store
+import { useAppStore } from '../../stores/championshipStore';
 
 export default function TeamDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -15,7 +15,7 @@ export default function TeamDetailScreen() {
   const teamId = String(id);
 
   // Usa a função da store para atualizar os dados do campeonato quando um time for deletado
-  const fetchChampionshipDetails = useChampionshipStore(state => state.fetchChampionshipDetails);
+  const fetchChampionshipDetails = useAppStore(state => state.fetchChampionshipDetails);
 
   const [team, setTeam] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
