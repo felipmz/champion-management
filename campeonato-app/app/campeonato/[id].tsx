@@ -120,7 +120,7 @@ export default function ChampionshipDetailScreen() {
                     <Text style={styles.vsText}>vs</Text>
                     <Text style={styles.teamName}>{fixture.away_team_name}</Text>
                     </View>
-                    <Text style={styles.roundText}>Rodada {fixture.round}</Text>
+                    <Text style={styles.roundText}> {fixture.round}</Text>
                 </TouchableOpacity>
                 ))}
                 {fixtures.length === 0 && <Text style={styles.emptyText}>Tabela ainda não gerada.</Text>}
@@ -198,10 +198,10 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F7FC' },
   container: { paddingHorizontal: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tabContainer: { flexDirection: 'row', backgroundColor: '#E9EEF6', borderRadius: 25, padding: 4, marginVertical: 16, justifyContent: 'space-around' },
+  tabContainer: { flexDirection: 'row', backgroundColor: '#E9EEF6', borderRadius: 25, padding: 0.5, marginVertical: 16, justifyContent: 'space-around' },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 20 },
   activeTab: { backgroundColor: '#007AFF' },
-  tabText: { color: '#007AFF', fontWeight: '600', marginLeft: 6, fontSize: 12 },
+  tabText: { color: '#007AFF', fontWeight: '600', marginLeft: 6, fontSize: 10 },
   activeTabText: { color: '#FFF' },
   contentView: { marginVertical: 10 },
   sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A2B48', marginBottom: 12 },

@@ -154,11 +154,11 @@ export default function MatchDetailScreen() {
             <>
             <View style={styles.actionsContainer}>
               <TouchableOpacity style={[styles.actionButton, match.status === 'finished' && styles.disabledButton]} onPress={() => openModal('goal')} disabled={match.status === 'finished'}>
-                <Feather name="award" size={24} color="#FFF" />
+                <Feather name="award" size={19} color="#FFF" />
                 <Text style={styles.actionButtonText}>Adicionar Gol</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.actionButton, match.status === 'finished' && styles.disabledButton]} onPress={() => openModal('card')} disabled={match.status === 'finished'}>
-                <Feather name="square" size={24} color="#FFF" />
+                <Feather name="square" size={19} color="#FFF" />
                 <Text style={styles.actionButtonText}>Adicionar Cartão</Text>
               </TouchableOpacity>
             </View>
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     actionsContainer: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, marginBottom: 24 },
     actionButton: { backgroundColor: '#007AFF', flex: 1, marginHorizontal: 8, paddingVertical: 15, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
     disabledButton: { backgroundColor: '#A0AEC0' },
-    actionButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
+    actionButtonText: { color: 'white', fontSize: 14, fontWeight: 'bold', marginLeft: 8 },
     timelineContainer: { paddingHorizontal: 16 },
     statsContainer: { paddingHorizontal: 16 },
     sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A2B48', marginBottom: 12 },
