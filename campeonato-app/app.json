@@ -1,25 +1,34 @@
 {
   "expo": {
-    "name": "campeonato-app",
+    "name": "Campeonato App",
     "slug": "campeonato-app",
     "version": "1.0.0",
+    "owner": "genisson",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "campeonatoapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "backgroundColor": "#000000"
+      }
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "com.geniflipcompany.campeonatoapp",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "output": "static",
@@ -31,7 +40,6 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
@@ -43,6 +51,14 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "dfb87d44-9e5f-4af7-aaee-a59bffc5aa34"
+      }
     }
   }
 }
