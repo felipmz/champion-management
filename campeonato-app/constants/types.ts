@@ -22,7 +22,7 @@ export interface Fixture {
   round: number;
   championship_id: string;
   championshipName?: string;
-  home_team_id: any; // Usamos 'any' aqui para simplificar, pois a API popula o objeto
+  home_team_id: any;
   away_team_id: any;
   home_team_name: string;
   away_team_name: string;
@@ -37,7 +37,7 @@ export type GameEvent = {
   minute: number;
   type: 'goal' | 'yellow_card' | 'red_card';
   player_id: string;
-  player_name: string; // O backend envia snake_case, mas vamos manter camelCase aqui e tratar na chamada
+  player_name: string;
   assister_id?: string;
   assister_name?: string;
   team_id: string;
@@ -64,11 +64,18 @@ export type PlayerMatchStat = {
   yellowCards: number;
   redCards: number;
   points: number;
+  teamName: string;
 };
 
 export type PlayerStat = {
   position: number;
   playerName: string;
   teamName: string;
-  goals: number;
+  goals?: number;
+  assists?: number;
+};
+
+export type RoundHighlights = {
+  bolaCheia?: PlayerMatchStat;
+  bolaMurcha?: PlayerMatchStat;
 };
