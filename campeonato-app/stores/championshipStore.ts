@@ -32,7 +32,7 @@ interface AppState {
   createPlayer: (teamId: string, name: string) => Promise<void>;
   deletePlayer: (playerId: string, teamId: string) => Promise<void>;
   fetchMatchDetails: (id: string) => Promise<void>;
-  fetchRoundHighlights: (championshipId: string, round: number) => Promise<void>; // <-- VÍRGULA FALTANDO AQUI
+  fetchRoundHighlights: (championshipId: string, round: number) => Promise<void>;
   addEvent: (matchId: string, eventData: any) => Promise<void>;
   finishMatch: (matchId: string, championshipId: string) => Promise<void>;
 }
@@ -46,10 +46,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   fixtures: [],
   standings: [],
   playerStats: [],
-  selectedTeam: null,
-  players: [],
   assistStats: [],
   roundHighlights: null,
+  selectedTeam: null,
+  players: [],
   selectedMatch: null,
   matchEvents: [],
   matchPlayers: [],
@@ -100,6 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       console.error("Store Error - fetchChampionshipDetails:", error);
       set({ isLoading: false });
+      throw error;
     }
   },
   
@@ -171,19 +172,16 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   finishMatch: async (matchId, championshipId) => {
     await api.patch(`/matches/${matchId}/status`, { status: 'finished' });
-    // Após finalizar, busca os dados do CAMPEONATO PAI para atualizar a classificação
     get().fetchChampionshipDetails(championshipId);
   },
 
   fetchRoundHighlights: async (championshipId, round) => {
-    // Limpa os destaques antigos antes de buscar novos
     set({ roundHighlights: null });
     try {
       const response = await api.get(`/championships/${championshipId}/highlights/${round}`);
       set({ roundHighlights: response.data });
     } catch (error) {
       console.error(`Store Error - fetchRoundHighlights (round ${round}):`, error);
-      // Não define como erro, apenas deixa nulo para a UI mostrar "sem dados"
     }
   },
 }));

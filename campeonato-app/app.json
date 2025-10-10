@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "owner": "genisson",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/FutApp.png",
     "scheme": "campeonatoapp",
     "userInterfaceStyle": "automatic",
     "splash": {
