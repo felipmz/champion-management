@@ -1,14 +1,14 @@
 // app/campeonato/[id].tsx
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Modal, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { Team, Fixture, TeamStanding, PlayerStat } from '../../constants/types';
-import { useAppStore } from '../../stores/championshipStore'; // MUDANÇA 1: Nome da Store corrigido
+import { useAppStore } from '../../stores/championshipStore';
 
-type ActiveTab = 'teams' | 'fixtures' | 'standings' | 'player_stats';
+type ActiveTab = 'teams' | 'fixtures' | 'standings' | 'player_stats' | 'assist_stats' | 'highlights';
 
 export default function ChampionshipDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -21,24 +21,36 @@ export default function ChampionshipDetailScreen() {
     fixtures,
     standings,
     playerStats,
+    assistStats,
+    roundHighlights,
     isLoading,
     fetchChampionshipDetails,
+    fetchRoundHighlights,
     createTeam,
     deleteTeam,
     generateFixtures,
-  } = useAppStore(); // MUDANÇA 2: Usando a store correta
+  } = useAppStore(); 
 
   const [modalVisible, setModalVisible] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [activeTab, setActiveTab] = useState<ActiveTab>('teams');
+  const [currentRound, setCurrentRound] = useState(1);
 
   useFocusEffect(
     useCallback(() => {
       if (championshipId && championshipId !== "undefined") {
         fetchChampionshipDetails(championshipId);
+        fetchRoundHighlights(championshipId, 1);
+        setCurrentRound(1);
       }
     }, [championshipId])
   );
+
+  useEffect(() => {
+    if (activeTab === 'highlights') {
+      fetchRoundHighlights(championshipId, currentRound);
+    }
+  }, [currentRound, activeTab]);
 
   const handleCreateTeam = async () => {
     if (newTeamName.trim().length === 0) return;
@@ -86,6 +98,8 @@ export default function ChampionshipDetailScreen() {
     return <ActivityIndicator size="large" style={styles.centered} />;
   }
 
+  const maxRounds = fixtures.length > 0 ? Math.max(...fixtures.map(f => f.round)) : 1;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen options={{ title: selectedChampionship.name }} />
@@ -106,6 +120,14 @@ export default function ChampionshipDetailScreen() {
             <TouchableOpacity style={[styles.tab, activeTab === 'player_stats' && styles.activeTab]} onPress={() => setActiveTab('player_stats')}>
                 <Feather name="award" size={18} color={activeTab === 'player_stats' ? '#FFF' : '#007AFF'} />
                 <Text style={[styles.tabText, activeTab === 'player_stats' && styles.activeTabText]}>Artilharia</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tab, activeTab === 'assist_stats' && styles.activeTab]} onPress={() => setActiveTab('assist_stats')}>
+                <Feather name="send" size={18} color={activeTab === 'assist_stats' ? '#FFF' : '#007AFF'} />
+                <Text style={[styles.tabText, activeTab === 'assist_stats' && styles.activeTabText]}>Assistências</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.tab, activeTab === 'highlights' && styles.activeTab]} onPress={() => setActiveTab('highlights')}>
+                <Feather name="trending-up" size={18} color={activeTab === 'highlights' ? '#FFF' : '#007AFF'} />
+                <Text style={[styles.tabText, activeTab === 'highlights' && styles.activeTabText]}>Destaques</Text>
             </TouchableOpacity>
         </View>
         
@@ -187,6 +209,66 @@ export default function ChampionshipDetailScreen() {
             ))}
           </View>
         )}
+        {activeTab === 'assist_stats' && (
+          <View style={styles.contentView}>
+            <Text style={styles.sectionTitle}>Líderes de Assistência</Text>
+            {assistStats.length > 0 ? playerStats.map((player: PlayerStat) => (
+              <View key={player.position} style={styles.card}>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <Text style={styles.rankText}>{player.position}</Text>
+                  <View>
+                    <Text style={styles.cardText}>{player.playerName}</Text>
+                    <Text style={styles.cardSubText}>{player.teamName}</Text>
+                  </View>
+                </View>
+                <Text style={styles.goalsText}>{player.assists} Assist.</Text>
+              </View>
+            )) : <Text style={styles.emptyText}>Nenhuma assistência registrada.</Text>}
+          </View>
+        )}
+        {activeTab === 'highlights' && (
+          <View style={styles.contentView}>
+            <Text style={styles.sectionTitle}>Destaques da Rodada</Text>
+            
+            <View style={styles.roundSelector}>
+              <TouchableOpacity onPress={() => setCurrentRound(r => Math.max(1, r - 1))} disabled={currentRound === 1}>
+                <Feather name="chevron-left" size={24} color={currentRound === 1 ? '#CCC' : '#007AFF'} />
+              </TouchableOpacity>
+              <Text style={styles.roundSelectorText}>Rodada {currentRound}</Text>
+              <TouchableOpacity onPress={() => setCurrentRound(r => Math.min(maxRounds, r + 1))} disabled={currentRound === maxRounds}>
+                <Feather name="chevron-right" size={24} color={currentRound === maxRounds ? '#CCC' : '#007AFF'} />
+              </TouchableOpacity>
+            </View>
+
+            {roundHighlights?.bolaCheia ? (
+              <>
+                <View style={[styles.highlightCard, styles.bolaCheiaCard]}>
+                    <View style={styles.highlightHeader}>
+                        <Feather name="arrow-up-circle" size={24} color="#15803D" />
+                        <Text style={[styles.highlightTitle, {color: '#15803D'}]}>BOLA CHEIA</Text>
+                    </View>
+                    <Text style={styles.highlightPlayerName}>{roundHighlights.bolaCheia.playerName}</Text>
+                    <Text style={styles.highlightTeamName}>{roundHighlights.bolaCheia.teamName}</Text>
+                    <Text style={styles.highlightPoints}>{roundHighlights.bolaCheia.points} pts na rodada</Text>
+                </View>
+
+                {roundHighlights?.bolaMurcha && (
+                    <View style={[styles.highlightCard, styles.bolaMurchaCard]}>
+                         <View style={styles.highlightHeader}>
+                            <Feather name="arrow-down-circle" size={24} color="#DC2626" />
+                            <Text style={[styles.highlightTitle, {color: '#DC2626'}]}>BOLA MURCHA</Text>
+                        </View>
+                        <Text style={styles.highlightPlayerName}>{roundHighlights.bolaMurcha.playerName}</Text>
+                        <Text style={styles.highlightTeamName}>{roundHighlights.bolaMurcha.teamName}</Text>
+                        <Text style={styles.highlightPoints}>{roundHighlights.bolaMurcha.points} pts na rodada</Text>
+                    </View>
+                )}
+              </>
+            ) : (
+              <Text style={styles.emptyText}>Sem dados de destaques para esta rodada.</Text>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {activeTab === 'teams' && (
@@ -222,7 +304,7 @@ const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row', backgroundColor: '#E9EEF6', borderRadius: 25, padding: 4, marginVertical: 16, justifyContent: 'space-around' },
   tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 20 },
   activeTab: { backgroundColor: '#007AFF' },
-  tabText: { color: '#007AFF', fontWeight: '600', marginLeft: 6, fontSize: 12 },
+  tabText: { color: '#007AFF', fontWeight: '600', marginLeft: 4, fontSize: 10 },
   activeTabText: { color: '#FFF' },
   contentView: { marginVertical: 10 },
   sectionTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A2B48', marginBottom: 12 },
@@ -255,4 +337,15 @@ const styles = StyleSheet.create({
   teamNameCell: { fontWeight: '600', color: '#1A2B48' },
   rankText: { fontSize: 18, fontWeight: 'bold', color: '#A0AEC0', marginRight: 16, width: 25 },
   goalsText: { fontSize: 16, fontWeight: 'bold', color: '#007AFF' },
+  roundSelector: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: 12, borderRadius: 12, marginBottom: 20 },
+  roundSelectorText: { fontSize: 18, fontWeight: 'bold', color: '#1A2B48' },
+  highlightCard: { padding: 16, borderRadius: 12, marginBottom: 16, borderWidth: 2 },
+  bolaCheiaCard: { backgroundColor: '#F0FDF4', borderColor: '#4ADE80' },
+  bolaMurchaCard: { backgroundColor: '#FEF2F2', borderColor: '#F87171' },
+  highlightHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  highlightTitle: { fontSize: 14, fontWeight: 'bold', marginLeft: 8, letterSpacing: 1 },
+  highlightPlayerName: { fontSize: 22, fontWeight: 'bold', color: '#1A2B48' },
+  highlightTeamName: { fontSize: 14, color: '#A0AEC0' },
+  highlightPoints: { fontSize: 16, fontWeight: '600', color: '#1A2B48', marginTop: 10 },
+
 });

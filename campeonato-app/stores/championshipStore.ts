@@ -1,41 +1,38 @@
 // stores/championshipStore.ts
 import { create } from 'zustand';
 import api from '../services/api';
-import { Championship, Team, Fixture, Player, GameEvent, TeamStanding, PlayerStat, PlayerMatchStat } from '../constants/types';
+import { Championship, Team, Fixture, Player, GameEvent, TeamStanding, PlayerStat, PlayerMatchStat, RoundHighlights } from '../constants/types';
 
 // Define a interface completa do nosso estado global
 interface AppState {
   isLoading: boolean;
-  // Nível Campeonatos (Home)
   championships: Championship[];
-  fetchChampionships: () => Promise<void>;
-  createChampionship: (name: string, playersPerTeam: number) => Promise<void>;
-  deleteChampionship: (id: string) => Promise<void>;
-
-  // Nível Campeonato (Detalhes)
   selectedChampionship: Championship | null;
   teams: Team[];
   fixtures: Fixture[];
   standings: TeamStanding[];
   playerStats: PlayerStat[];
-  fetchChampionshipDetails: (id: string) => Promise<void>;
-  generateFixtures: (championshipId: string) => Promise<void>;
-  
-  // Nível Time (Detalhes)
+  assistStats: PlayerStat[];
+  roundHighlights: RoundHighlights | null;
   selectedTeam: Team | null;
   players: Player[];
+  selectedMatch: Fixture | null;
+  matchEvents: GameEvent[];
+  matchPlayers: Player[];
+  matchStats: PlayerMatchStat[];
+
+  fetchChampionships: () => Promise<void>;
+  createChampionship: (name: string, playersPerTeam: number) => Promise<void>;
+  deleteChampionship: (id: string) => Promise<void>;
+  fetchChampionshipDetails: (id: string) => Promise<void>;
+  generateFixtures: (championshipId: string) => Promise<void>;
   fetchTeamDetails: (id: string) => Promise<void>;
   createTeam: (championshipId: string, name: string) => Promise<void>;
   deleteTeam: (teamId: string, championshipId: string) => Promise<void>;
   createPlayer: (teamId: string, name: string) => Promise<void>;
   deletePlayer: (playerId: string, teamId: string) => Promise<void>;
-
-  // Nível Partida (Detalhes)
-  selectedMatch: Fixture | null;
-  matchEvents: GameEvent[];
-  matchPlayers: Player[];
-  matchStats: PlayerMatchStat[];
   fetchMatchDetails: (id: string) => Promise<void>;
+  fetchRoundHighlights: (championshipId: string, round: number) => Promise<void>; // <-- VÍRGULA FALTANDO AQUI
   addEvent: (matchId: string, eventData: any) => Promise<void>;
   finishMatch: (matchId: string, championshipId: string) => Promise<void>;
 }
@@ -51,6 +48,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   playerStats: [],
   selectedTeam: null,
   players: [],
+  assistStats: [],
+  roundHighlights: null,
   selectedMatch: null,
   matchEvents: [],
   matchPlayers: [],
@@ -81,12 +80,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   fetchChampionshipDetails: async (id) => {
     set({ isLoading: true });
     try {
-      const [champ, teams, fixtures, standings, playerStats] = await Promise.all([
+      const [champ, teams, fixtures, standings, playerStats, assistStats] = await Promise.all([
         api.get(`/championships/${id}`),
         api.get(`/championships/${id}/teams`),
         api.get(`/championships/${id}/fixtures`),
         api.get(`/championships/${id}/standings`),
         api.get(`/championships/${id}/player-stats`),
+        api.get(`/championships/${id}/assist-stats`),
       ]);
       set({
         selectedChampionship: champ.data,
@@ -94,6 +94,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         fixtures: fixtures.data,
         standings: standings.data,
         playerStats: playerStats.data,
+        assistStats: assistStats.data,
         isLoading: false,
       });
     } catch (error) {
@@ -172,5 +173,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     await api.patch(`/matches/${matchId}/status`, { status: 'finished' });
     // Após finalizar, busca os dados do CAMPEONATO PAI para atualizar a classificação
     get().fetchChampionshipDetails(championshipId);
+  },
+
+  fetchRoundHighlights: async (championshipId, round) => {
+    // Limpa os destaques antigos antes de buscar novos
+    set({ roundHighlights: null });
+    try {
+      const response = await api.get(`/championships/${championshipId}/highlights/${round}`);
+      set({ roundHighlights: response.data });
+    } catch (error) {
+      console.error(`Store Error - fetchRoundHighlights (round ${round}):`, error);
+      // Não define como erro, apenas deixa nulo para a UI mostrar "sem dados"
+    }
   },
 }));
