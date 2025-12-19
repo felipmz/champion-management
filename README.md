@@ -7,7 +7,7 @@ Este projeto foi desenvolvido em **colaboração**, aplicando conceitos de metod
 ---
 
 ## 📲 Download e Teste
-### **[➤ Baixar APK (Android)](https://github.com/GenissonEmilio/champion-management/releases/tag/Sports)**
+### **[➤ Baixar APK (Android)](https://github.com/felipmz/champion-management/releases)**
 > **Nota:** Para instalar, é necessário permitir a instalação de fontes desconhecidas nas configurações do seu Android.
 
 ---
